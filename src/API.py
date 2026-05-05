@@ -1,10 +1,11 @@
 from __future__ import annotations
-from pathlib import Path
-import tempfile
-import json
 
-import numpy as np
+from pathlib import Path
+import json
+import tempfile
+
 import joblib
+import numpy as np
 import torch
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
@@ -12,13 +13,20 @@ from fastapi.responses import JSONResponse
 from src.infer import build_feature_df
 from src.train_autoencoder import AE
 
+
+# Base directories (robust to working directory)
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODELS_DIR = BASE_DIR / "models"
+OUTPUTS_DIR = BASE_DIR / "outputs"
+
 app = FastAPI(title="Pump Audio Anomaly API")
 
+
 # Load models and thresholds once at startup
-IF_BUNDLE = joblib.load("models/isolation_forest.joblib")
-AE_CKPT = torch.load("models/autoencoder.pt", map_location="cpu")
-SCALER_BUNDLE = joblib.load("models/autoencoder.scaler.joblib")
-THRESHOLDS = json.load(open("outputs/thresholds.json", "r", encoding="utf-8"))
+IF_BUNDLE = joblib.load(MODELS_DIR / "isolation_forest.joblib")
+AE_CKPT = torch.load(MODELS_DIR / "autoencoder.pt", map_location="cpu")
+SCALER_BUNDLE = joblib.load(MODELS_DIR / "autoencoder.scaler.joblib")
+THRESHOLDS = json.load(open(OUTPUTS_DIR / "thresholds.json", "r", encoding="utf-8"))
 
 AE_MODEL = AE(AE_CKPT["input_dim"])
 AE_MODEL.load_state_dict(AE_CKPT["state_dict"])
@@ -50,7 +58,7 @@ async def predict(file: UploadFile = File(...)):
         ae_scores = np.mean((recon - X_ae) ** 2, axis=1)
     ae_mean = float(np.mean(ae_scores))
 
-    # flags and final label (use your latest logic or the simple OR)
+    # Flags and final label (your “stronger signal” rule)
     if_flag = bool(if_mean >= THRESHOLDS["isolation_forest"])
     ae_flag = bool(ae_mean >= THRESHOLDS["autoencoder"])
 
