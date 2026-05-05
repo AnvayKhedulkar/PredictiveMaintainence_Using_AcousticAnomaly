@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+models/*.pt
+models/*.joblib
+outputs/*
+!outputs/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/features/*
+!data/features/.gitkeep

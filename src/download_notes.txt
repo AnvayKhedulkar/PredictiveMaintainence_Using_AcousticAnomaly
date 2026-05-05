@@ -1,0 +1,11 @@
+Download the datasets manually from their official pages and extract them under data/raw/.
+
+MIMII:
+- Official Zenodo record: https://zenodo.org/records/3384388
+
+MIMII DG:
+- Official Zenodo record: https://zenodo.org/records/6529888
+
+Notes:
+- MIMII archives are large and include machine types such as fan, pump, slider, and valve.
+- Use only subsets first if you want faster iteration.
