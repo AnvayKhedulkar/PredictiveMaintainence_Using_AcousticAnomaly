@@ -14,13 +14,12 @@ from src.infer import build_feature_df
 from src.train_autoencoder import AE
 
 
-# Base directories (robust to working directory)
-BASE_DIR = Path(__file__).resolve().parent.parent
-MODELS_DIR = BASE_DIR / "models"
-OUTPUTS_DIR = BASE_DIR / "outputs"
+# Base directories: src is the parent folder of this file
+SRC_DIR = Path(__file__).resolve().parent
+MODELS_DIR = SRC_DIR / "models"
+OUTPUTS_DIR = SRC_DIR / "outputs"
 
 app = FastAPI(title="Pump Audio Anomaly API")
-
 
 # Load models and thresholds once at startup
 IF_BUNDLE = joblib.load(MODELS_DIR / "isolation_forest.joblib")
@@ -35,20 +34,16 @@ AE_MODEL.eval()
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    # Save uploaded file to a temp path
     suffix = Path(file.filename).suffix
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp_path = Path(tmp.name)
 
-    # Build features exactly like infer.py
     df = build_feature_df(tmp_path)
 
-    # IF scores
     if_scores = -IF_BUNDLE["pipeline"].score_samples(df[IF_BUNDLE["feature_columns"]])
     if_mean = float(np.mean(if_scores))
 
-    # AE scores
     X_ae = SCALER_BUNDLE["scaler"].transform(
         df[SCALER_BUNDLE["feature_columns"]].values
     )
@@ -58,7 +53,6 @@ async def predict(file: UploadFile = File(...)):
         ae_scores = np.mean((recon - X_ae) ** 2, axis=1)
     ae_mean = float(np.mean(ae_scores))
 
-    # Flags and final label (your “stronger signal” rule)
     if_flag = bool(if_mean >= THRESHOLDS["isolation_forest"])
     ae_flag = bool(ae_mean >= THRESHOLDS["autoencoder"])
 
